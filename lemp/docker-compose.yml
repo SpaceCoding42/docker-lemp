@@ -1,0 +1,55 @@
+version: '3'
+services:
+  nginx17:
+    build:
+      context: ./images/nginx
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+      #    log_driver: syslog
+      # монтируем директории, слева директории на основной машине, справа - куда они монтируются в контейнере
+    volumes:
+      - ./www:/var/www:rw
+      - ./images/nginx/conf.d:/etc/nginx/conf.d:rw
+      - ./logs/nginx:/var/log/nginx:rw
+      - ./images/nginx/default.d:/etc/nginx/default.d:rw
+      - ./images/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+#      - /etc/letsencrypt:/etc/letsencrypt:rw
+#       nginx должен общаться с php контейнером
+    depends_on:
+      - phpfpm74
+  phpfpm74:
+      build:
+        context: ./images/php
+      restart: always
+      ports:
+        - 9001:9001
+      # этот образ будет общаться с mysql
+      depends_on:
+        - mariadb10
+      # монтируем директорию с проектами
+      volumes:
+        - ./www:/var/www
+  mariadb10:
+    image: mariadb:latest
+    restart: always
+#    DB storage
+    volumes:
+      - ./images/mysql:/var/lib/mysql
+    ports:
+      - 3306:3306
+    environment:
+#      - MYSQL_DATABASE=mydb
+      - MYSQL_HOST=localhost
+      - MYSQL_USER=myuser
+      - MYSQL_PASSWORD=secret
+      - MYSQL_ROOT_PASSWORD=docker
+#  adminer:
+#    image: adminer
+#    restart: always
+#    ports:
+#      - 8080:8080
+networks:
+  project:
+    driver: bridge
